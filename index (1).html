@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{color-scheme:light;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px system-ui,sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>Inspección HyS Taller</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: ficha de campo en una columna angosta, con barra fija de avance y tres vistas (relevamiento, mediciones, informe). */
+:root{
+  --bg:#edf0f2; --surface:#ffffff; --surface-2:#e1e7ea; --ink:#15202a; --ink-2:#4b5b67; --line:#ccd5db;
+  --accent:#0b5d7e; --accent-ink:#ffffff;
+  --ok:#1b7a49; --ok-bg:#dcf0e4;
+  --warn:#a35e08; --warn-bg:#fae9cc;
+  --bad:#b3261e; --bad-bg:#f9dad7;
+  --low:#2f6aa3; --on-sev:#ffffff;
+  --haz-y:#f5c400; --haz-k:#15202a;
+  --font-display:'Barlow Condensed','Arial Narrow',sans-serif;
+  --font-body:'Barlow',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e151a; --surface:#172129; --surface-2:#212d36; --ink:#e7edf1; --ink-2:#9db0bc; --line:#2c3a45;
+    --accent:#5cbfe6; --accent-ink:#05212d;
+    --ok:#62d595; --ok-bg:#12301f;
+    --warn:#f0b35a; --warn-bg:#35260c;
+    --bad:#ff8c82; --bad-bg:#3b1612;
+    --low:#8db9ec; --on-sev:#0e151a;
+    --haz-k:#000000;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e151a; --surface:#172129; --surface-2:#212d36; --ink:#e7edf1; --ink-2:#9db0bc; --line:#2c3a45;
+  --accent:#5cbfe6; --accent-ink:#05212d;
+  --ok:#62d595; --ok-bg:#12301f;
+  --warn:#f0b35a; --warn-bg:#35260c;
+  --bad:#ff8c82; --bad-bg:#3b1612;
+  --low:#8db9ec; --on-sev:#0e151a;
+  --haz-k:#000000;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--font-body); font-size:16px; line-height:1.4;
+  padding-block:0 64px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:760px;margin-inline:auto}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.hero{padding-top:18px}
+.tape{height:8px;border-radius:2px;background:repeating-linear-gradient(-45deg,var(--haz-y) 0 10px,var(--haz-k) 10px 20px)}
+h1{font-family:var(--font-display);font-weight:700;font-size:clamp(30px,8.5vw,46px);line-height:1;letter-spacing:.01em;text-transform:uppercase;margin:14px 0 6px;text-wrap:balance}
+.sub{color:var(--ink-2);margin:0 0 6px;max-width:60ch}
+
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-top:10px;margin-top:8px}
+.pline{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:14px;color:var(--ink-2)}
+.pline strong{color:var(--ink);font-variant-numeric:tabular-nums}
+.pbar{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden;margin:6px 0 4px}
+.pfill{height:100%;width:0;background:var(--accent);transition:width .25s}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line)}
+.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 4px 9px;min-height:44px;font:600 15px var(--font-body);letter-spacing:.02em;color:var(--ink-2);cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+
+#app{padding-top:14px;display:flex;flex-direction:column;gap:12px}
+
+.card,.sec{background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.card{padding:0}
+.card > .body{padding:14px}
+summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;min-height:52px}
+summary::-webkit-details-marker{display:none}
+.st{font-family:var(--font-display);font-weight:700;font-size:21px;letter-spacing:.02em;text-transform:uppercase;line-height:1.1;min-width:0}
+.cnt{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.mono{font-family:var(--font-mono);font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.chev{width:9px;height:9px;border-right:2px solid var(--ink-2);border-bottom:2px solid var(--ink-2);transform:rotate(45deg);transition:transform .15s;flex-shrink:0;margin-left:4px}
+details[open] > summary .chev{transform:rotate(-135deg)}
+.ref{margin:0;padding:0 14px 12px;color:var(--ink-2);font-size:13px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;padding:0 14px 14px}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld > span{font-size:13px;font-weight:600;color:var(--ink-2);letter-spacing:.02em}
+.fld.wide{grid-column:1 / -1}
+input[type="text"],input[type="number"],input[type="date"],input[type="time"],select,textarea{
+  width:100%;min-width:0;font:16px var(--font-body);color:var(--ink);background:var(--bg);
+  border:1px solid var(--line);border-radius:6px;padding:10px;min-height:44px
+}
+textarea{resize:vertical;min-height:72px}
+
+.it{padding:14px;border-top:1px solid var(--line)}
+.it[data-r="n"]{background:color-mix(in srgb,var(--bad-bg) 55%,var(--surface))}
+.q{margin:0 0 10px;font-weight:500}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.sb{min-height:44px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);font:600 15px var(--font-body);cursor:pointer;padding:0 6px}
+.sb[aria-pressed="true"][data-v="c"]{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.sb[aria-pressed="true"][data-v="n"]{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.sb[aria-pressed="true"][data-v="na"]{background:var(--surface-2);border-color:var(--ink-2);color:var(--ink)}
+.extra{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.sevrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.sevrow > span{font-size:13px;font-weight:600;color:var(--ink-2);margin-right:2px}
+.sv{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 14px var(--font-body);cursor:pointer}
+.sv[aria-pressed="true"][data-s="alta"]{background:var(--bad);border-color:var(--bad);color:var(--on-sev)}
+.sv[aria-pressed="true"][data-s="media"]{background:var(--warn);border-color:var(--warn);color:var(--on-sev)}
+.sv[aria-pressed="true"][data-s="baja"]{background:var(--low);border-color:var(--low);color:var(--on-sev)}
+.phrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ph{position:relative;width:72px;height:72px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph button{position:absolute;top:2px;right:2px;width:28px;height:28px;border-radius:50%;border:0;background:var(--haz-k);color:#fff;font-size:18px;line-height:1;cursor:pointer}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 15px var(--font-body);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.link{background:none;border:0;color:var(--accent);font:600 14px var(--font-body);padding:8px 0;min-height:40px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.it > .link{margin-top:4px}
+
+.pill{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font:600 12px var(--font-body);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.low{background:var(--surface-2);color:var(--low)}
+.pill.idle{background:var(--surface-2);color:var(--ink-2)}
+
+.note{color:var(--ink-2);font-size:13px;margin:0;max-width:65ch}
+.mrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;padding:14px;border-top:1px solid var(--line);align-items:end}
+.mres{display:flex;align-items:center;justify-content:space-between;gap:8px;grid-column:1 / -1;flex-wrap:wrap}
+.hd{padding:14px 14px 4px}
+.hd h2{margin:0 0 4px;font-family:var(--font-display);font-size:24px;text-transform:uppercase;letter-spacing:.02em;line-height:1.1}
+.foot{padding:12px 14px 14px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap}
+.howto{padding:0 14px 14px;color:var(--ink-2);font-size:14px}
+.howto ul{margin:6px 0 0;padding-left:18px}
+.howto li{margin-bottom:4px}
+
+.score{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:14px 14px 0}
+.big{font-family:var(--font-display);font-weight:700;font-size:56px;line-height:1;font-variant-numeric:tabular-nums}
+.stack{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--surface-2);margin:12px 14px 8px}
+.stack i{display:block;height:100%}
+.legend{display:flex;gap:6px 14px;flex-wrap:wrap;padding:0 14px 14px;font-size:13px;color:var(--ink-2)}
+.legend b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.srow{display:grid;grid-template-columns:minmax(0,1fr) 90px 44px;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line);font-size:14px}
+.mini{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--surface-2)}
+.mini i{display:block;height:100%}
+.pc{font-family:var(--font-mono);font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+.flist{list-style:none;margin:0;padding:0}
+.fnd{padding:14px;border-top:1px solid var(--line)}
+.fh{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.fs{font-size:13px;color:var(--ink-2)}
+.fnd p{margin:0 0 6px}
+.fn{color:var(--ink-2);font-size:14px}
+.fp{font-size:13px;font-weight:600;color:var(--ink-2)}
+.empty{padding:14px;color:var(--ink-2)}
+#fallback{margin-top:8px;font-family:var(--font-mono);font-size:13px;min-height:180px}
+.disc{font-size:13px;color:var(--ink-2);max-width:65ch;margin:4px 2px 0}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="tape" aria-hidden="true"></div>
+    <h1>Inspección de higiene y seguridad</h1>
+    <p class="sub">Relevamiento de taller en campo. Marcá cada punto, medí luz y ruido, y copiá el informe con los hallazgos priorizados.</p>
+  </header>
+  <div class="bar" id="bar">
+    <div class="pline"><span id="ptext"></span><strong id="pnc"></strong></div>
+    <div class="pbar"><div class="pfill" id="pfill"></div></div>
+    <nav class="tabs" role="tablist" aria-label="Vistas">
+      <button type="button" role="tab" data-tab="rel" aria-selected="true">Relevamiento</button>
+      <button type="button" role="tab" data-tab="med" aria-selected="false">Mediciones</button>
+      <button type="button" role="tab" data-tab="inf" aria-selected="false">Informe</button>
+    </nav>
+  </div>
+  <main id="app"></main>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+var SECTIONS=[
+{id:'orden',name:'Orden, limpieza y circulación',ref:'Ley 19.587 · Dec. 351/79',items:[
+ 'Pisos limpios y secos, sin derrames de aceite, grasa ni agua acumulada',
+ 'Pasillos y vías de circulación libres, demarcados y sin obstáculos',
+ 'Materiales, repuestos y cubiertas estibados en forma estable y a altura segura',
+ 'Herramientas guardadas en carros o tableros, no tiradas en el piso',
+ 'Fosas, desniveles y escalones señalizados o con tapas y barandas',
+ 'Recipientes de residuos identificados, tapados y vaciados con frecuencia',
+ 'Techos, paredes y estructuras en buen estado (sin goteras ni chapas sueltas)']},
+{id:'ilum',name:'Iluminación y ventilación',ref:'Dec. 351/79 Cap. 12 · Res. SRT 84/12',items:[
+ 'Iluminación general uniforme, sin zonas oscuras ni sombras marcadas',
+ 'Puestos críticos (elevador, balanceadora, banco, alineado) con luz localizada suficiente',
+ 'Lámparas y tubos funcionando, sin parpadeo, y luminarias limpias',
+ 'Sin deslumbramiento ni reflejos sobre pantallas o superficies de trabajo',
+ 'Luces de emergencia operativas y probadas',
+ 'Ventilación natural o forzada suficiente en el taller',
+ 'Extracción de gases de escape donde se enciende un motor',
+ 'Confort térmico: sin calor ni frío extremos en los puestos']},
+{id:'ruido',name:'Ruido y vibraciones',ref:'Dec. 351/79 Cap. 13 · Res. SRT 295/03 y 85/12',items:[
+ 'Fuentes de ruido identificadas (compresor, pistolas neumáticas, amoladoras, golpes)',
+ 'Compresor aislado, con cerramiento o fuera del área de trabajo',
+ 'Fugas de aire comprimido reparadas (silbidos en mangueras y acoples)',
+ 'Zonas de 85 dB(A) o más señalizadas con uso obligatorio de protección auditiva',
+ 'Protectores auditivos disponibles, limpios y en uso',
+ 'Herramientas vibrantes con tiempos de exposición o rotación controlados',
+ 'Medición de ruido vigente y registrada (protocolo SRT)']},
+{id:'epp',name:'Equipos de protección personal',ref:'Dec. 351/79 Cap. 19 · Res. SRT 299/11',items:[
+ 'Calzado de seguridad con puntera en todo el personal del sector',
+ 'Protección ocular o facial en amolado, soldadura, aire comprimido y baterías',
+ 'Guantes adecuados a la tarea (mecánicos, nitrilo para químicos, anticorte)',
+ 'Protección respiratoria para polvo, pintura, solventes y soldadura',
+ 'Ropa de trabajo ajustada, sin cadenas, anillos ni cabello suelto cerca de partes móviles',
+ 'EPP certificado, en buen estado y sin fecha vencida',
+ 'Constancia de entrega de EPP firmada por cada trabajador',
+ 'Arnés y línea de vida si se trabaja en altura (camiones, estanterías)']},
+{id:'maq',name:'Máquinas, equipos y herramientas',ref:'Dec. 351/79 Cap. 15',items:[
+ 'Protecciones en partes móviles (correas, poleas, discos, ejes)',
+ 'Paradas de emergencia accesibles y funcionando',
+ 'Herramientas manuales sin mangos flojos, rotos ni puntas deformadas',
+ 'Herramientas eléctricas con cables y fichas sanas, sin empalmes',
+ 'Amoladoras con protección de disco colocada y discos en buen estado',
+ 'Mantenimiento preventivo registrado, con bloqueo y etiquetado al intervenir',
+ 'Solo personal capacitado y autorizado opera cada equipo',
+ 'Soldadora con cables, pinza y masa en buen estado, y protección para terceros']},
+{id:'izaje',name:'Elevación y manejo de vehículos',ref:'Dec. 351/79 Cap. 16',items:[
+ 'Elevador o puente con mantenimiento e inspección vigentes y capacidad visible',
+ 'Caballetes o soportes de seguridad en uso (nunca solo el gato)',
+ 'Gatos hidráulicos y zorras sin pérdidas ni deformaciones',
+ 'Vehículos calzados o frenados antes de trabajar debajo o alrededor',
+ 'Cadenas, eslingas y ganchos identificados y en buen estado',
+ 'Autoelevador o aparejos (si hay) con operador habilitado y revisión diaria',
+ 'Circulación de vehículos dentro del taller ordenada y a baja velocidad']},
+{id:'neum',name:'Neumáticos y gomería',ref:'Buenas prácticas del sector',items:[
+ 'Jaula, protección o dispositivo de seguridad para inflar cubiertas',
+ 'Inflado con manguera con manómetro y extensión, con el operario fuera de la trayectoria',
+ 'Aros y llantas revisados (fisuras, óxido, deformación) antes de inflar',
+ 'Desmontadora y balanceadora con protecciones y en buen estado',
+ 'Cubiertas pesadas (camión, agro) manipuladas con ayuda mecánica',
+ 'Cubiertas almacenadas en pilas o estantes estables, lejos de fuentes de calor',
+ 'Contrapesos, pegamentos y parches guardados y con ventilación al usarlos',
+ 'Zona de prueba de pinchaduras ordenada y sin riesgo de resbalón']},
+{id:'elec',name:'Instalación eléctrica',ref:'Dec. 351/79 Cap. 14 · Res. SRT 900/15',items:[
+ 'Tablero cerrado, señalizado y con 1 m libre al frente',
+ 'Disyuntor diferencial y térmicas instalados y probados',
+ 'Puesta a tierra medida y vigente',
+ 'Sin cables sueltos en el piso, empalmes precarios ni alargues en cadena',
+ 'Tomacorrientes y fichas sin daños, sin zapatillas sobrecargadas',
+ 'Instalación protegida donde hay agua (lavado, pruebas de neumáticos)',
+ 'Cartelería de riesgo eléctrico colocada']},
+{id:'fuego',name:'Incendio y emergencias',ref:'Dec. 351/79 Cap. 18',items:[
+ 'Matafuegos del tipo adecuado (ABC), en cantidad y distancia correctas',
+ 'Matafuegos con carga y precinto vigentes, señalizados y accesibles',
+ 'Salidas de emergencia señalizadas, libres y sin trabas',
+ 'Plan de evacuación, croquis y punto de reunión, con simulacros registrados',
+ 'Inflamables (solventes, pinturas, combustible, aceites) en lugar y recipientes adecuados',
+ 'Prohibición de fumar señalizada y cumplida',
+ 'Carga de fuego estimada y sistema de detección o hidrantes si corresponde',
+ 'Botiquín completo y vigente, y personal con capacitación en primeros auxilios']},
+{id:'quim',name:'Sustancias químicas y residuos',ref:'Ley 24.051 · SGA',items:[
+ 'Hojas de seguridad disponibles para cada producto',
+ 'Envases rotulados, sin productos en botellas de gaseosa u otros envases engañosos',
+ 'Aceite usado, filtros, baterías y trapos con aceite en contenedores con contención',
+ 'Retiro de residuos peligrosos por operador habilitado, con manifiestos',
+ 'Kit antiderrame (absorbente, pala, bolsas) accesible',
+ 'Lavaojos o ducha de emergencia donde se manipulan corrosivos o baterías',
+ 'Carga de baterías en lugar ventilado y alejado de chispas']},
+{id:'pres',name:'Aire comprimido y recipientes a presión',ref:'Dec. 351/79 Cap. 17',items:[
+ 'Compresor y tanque con válvula de seguridad y manómetro en funcionamiento',
+ 'Purga del tanque periódica y registrada',
+ 'Inspección o prueba hidráulica del recipiente vigente',
+ 'Mangueras y acoples en buen estado, con fijación contra latigazos',
+ 'Aire comprimido no usado para limpiar ropa ni piel']},
+{id:'ergo',name:'Ergonomía y manejo de cargas',ref:'Res. SRT 295/03 · 886/15',items:[
+ 'Cargas de más de 25 kg levantadas con ayuda mecánica o entre dos personas',
+ 'Posturas forzadas (agachado, brazos sobre la cabeza) con pausas y rotación',
+ 'Alturas de banco y estanterías que evitan levantar desde el piso',
+ 'Capacitación en técnica de levantamiento de cargas']},
+{id:'san',name:'Sanitarios y bienestar',ref:'Dec. 351/79',items:[
+ 'Baños y vestuarios limpios y en cantidad suficiente',
+ 'Agua potable disponible',
+ 'Lugar de descanso o comedor separado del sector de trabajo',
+ 'Jabón y elementos para lavarse las manos tras manipular aceites y químicos']},
+{id:'gest',name:'Gestión y documentación',ref:'Dec. 1338/96 · Res. SRT 463/09',items:[
+ 'Servicio de Higiene y Seguridad designado y con visitas registradas',
+ 'ART vigente y todo el personal declarado',
+ 'Exámenes médicos periódicos al día',
+ 'Capacitación registrada: inducción y riesgos de cada puesto',
+ 'Registro de accidentes e incidentes (incluye cuasi accidentes)',
+ 'Relevamiento General de Riesgos Laborales (RGRL) presentado y actualizado',
+ 'Señalización de seguridad colocada y legible']}
+];
+
+var SEV={alta:{l:'Alta',plazo:'Inmediato (hasta 48 h)',w:0,c:'bad'},media:{l:'Media',plazo:'Hasta 30 días',w:1,c:'warn'},baja:{l:'Baja',plazo:'Hasta 90 días',w:2,c:'low'}};
+var LUX=[[100,'100 lux · circulación, depósito'],[200,'200 lux · tarea gruesa'],[300,'300 lux · taller general'],[500,'500 lux · tarea de detalle'],[750,'750 lux · tarea muy fina']];
+var KEY='hys-taller-v1';
+
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function today(){var d=new Date();function p(n){return (n<10?'0':'')+n}return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
+function fresh(){
+  return {
+    meta:{estab:'',sector:'',inspector:'',acomp:'',fecha:today(),hora:''},
+    items:{},
+    lux:[{p:'Puesto del elevador',m:'',r:300},{p:'Balanceadora y desmontadora',m:'',r:500},{p:'Banco de trabajo',m:'',r:500},{p:'Pasillo de circulación',m:'',r:100},{p:'Depósito',m:'',r:100}],
+    noise:[{p:'Compresor',db:'',h:8},{p:'Zona de pistolas neumáticas',db:'',h:4},{p:'Balanceadora',db:'',h:4},{p:'Banco y amoladora',db:'',h:2}],
+    obs:''
+  };
+}
+function load(){
+  try{
+    var raw=localStorage.getItem(KEY); if(!raw) return null;
+    var o=JSON.parse(raw), f=fresh();
+    if(o&&typeof o==='object'){
+      if(o.meta) f.meta=Object.assign(f.meta,o.meta);
+      if(o.items&&typeof o.items==='object') f.items=o.items;
+      if(Array.isArray(o.lux)) f.lux=o.lux;
+      if(Array.isArray(o.noise)) f.noise=o.noise;
+      if(typeof o.obs==='string') f.obs=o.obs;
+    }
+    return f;
+  }catch(e){return null}
+}
+var st=load()||fresh();
+var photos={};
+var ui={tab:'rel',open:{},secOpen:{},confirmClear:false};
+var saveT=null;
+function save(){clearTimeout(saveT);saveT=setTimeout(function(){try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}},300)}
+
+var app=document.getElementById('app');
+
+/* ---------- cálculos ---------- */
+function item(id){return st.items[id]||(st.items[id]={r:null,sev:null,note:''})}
+function counts(sec){
+  var c=0,n=0,na=0;
+  sec.items.forEach(function(_,i){var r=(st.items[sec.id+'-'+i]||{}).r; if(r==='c')c++; else if(r==='n')n++; else if(r==='na')na++;});
+  return {c:c,n:n,na:na,t:sec.items.length,done:c+n+na};
+}
+function totals(){
+  var T={c:0,n:0,na:0,t:0,done:0};
+  SECTIONS.forEach(function(s){var k=counts(s);T.c+=k.c;T.n+=k.n;T.na+=k.na;T.t+=k.t;T.done+=k.done;});
+  return T;
+}
+function pct(c,n){return (c+n)?Math.round(100*c/(c+n)):null}
+function fmtH(x){
+  if(x>=8) return '8 h';
+  if(x*60<1) return 'menos de 1 min';
+  var h=Math.floor(x), m=Math.round((x-h)*60);
+  if(m===60){h+=1;m=0}
+  return (h?h+' h':'')+(h&&m?' ':'')+(m?m+' min':'');
+}
+function luxRes(r){
+  var m=parseFloat(r.m), req=parseFloat(r.r);
+  if(isNaN(m)) return {k:'idle',t:'Sin medir'};
+  if(m>=req) return {k:'ok',t:'Cumple · '+m+' lux'};
+  return {k:'bad',t:'No cumple · faltan '+Math.round(req-m)+' lux'};
+}
+function noiseRes(r){
+  var db=parseFloat(r.db);
+  if(isNaN(db)) return {k:'idle',t:'Sin medir'};
+  var h=parseFloat(r.h); if(isNaN(h)) h=8;
+  if(db>115) return {k:'bad',t:'Supera 115 dB(A)'};
+  var allowed=db<=85?8:8/Math.pow(2,(db-85)/3);
+  var lim=db<=85?'hasta 8 h':fmtH(allowed);
+  if(h<=allowed+1e-9) return {k:'ok',t:'Cumple · límite '+lim};
+  return {k:'bad',t:'Excede · límite '+lim};
+}
+function pill(res){return '<span class="pill '+res.k+'" data-res>'+esc(res.t)+'</span>'}
+function sw(s){return s?SEV[s].w:3}
+function findings(){
+  var out=[];
+  SECTIONS.forEach(function(s,si){s.items.forEach(function(t,i){
+    var id=s.id+'-'+i, d=st.items[id];
+    if(d&&d.r==='n') out.push({id:id,sec:s.name,si:si,i:i,t:t,sev:d.sev||null,note:d.note||''});
+  });});
+  out.sort(function(a,b){return (sw(a.sev)-sw(b.sev))||(a.si-b.si)||(a.i-b.i)});
+  return out;
+}
+
+/* ---------- vista: relevamiento ---------- */
+function fld(k,label,v,type,ph){
+  return '<label class="fld"><span>'+label+'</span><input type="'+type+'" data-meta="'+k+'" value="'+esc(v)+'" placeholder="'+esc(ph||'')+'" autocomplete="off"></label>';
+}
+function secSum(sec){
+  var k=counts(sec);
+  return '<span class="st">'+esc(sec.name)+'</span><span class="cnt"><span class="mono">'+k.done+'/'+k.t+'</span>'+(k.n?'<span class="pill bad">'+k.n+' no cumple</span>':'')+'<span class="chev" aria-hidden="true"></span></span>';
+}
+function extraHTML(id,d){
+  var sev='';
+  if(d.r==='n'){
+    sev='<div class="sevrow"><span>Prioridad</span>'+['alta','media','baja'].map(function(s){
+      return '<button type="button" class="sv" data-act="sev" data-s="'+s+'" aria-pressed="'+(d.sev===s)+'">'+SEV[s].l+'</button>';
+    }).join('')+'</div>';
+  }
+  var ph=(photos[id]||[]).map(function(src,k){
+    return '<div class="ph"><img src="'+src+'" alt="Foto '+(k+1)+'"><button type="button" data-act="rmph" data-k="'+k+'" aria-label="Quitar foto">×</button></div>';
+  }).join('');
+  return '<div class="extra">'+sev+
+    '<textarea data-act="note" rows="2" aria-label="Nota del hallazgo" placeholder="Qué viste, dónde, cuántos equipos o personas alcanza">'+esc(d.note||'')+'</textarea>'+
+    '<div class="phrow">'+ph+'<label class="btn">+ Foto<input type="file" accept="image/*" data-act="photo" hidden></label></div></div>';
+}
+function itemHTML(sec,i){
+  var id=sec.id+'-'+i, d=st.items[id]||{};
+  var open=ui.open[id]||d.r==='n'||d.note||(photos[id]&&photos[id].length);
+  var lab={c:'Cumple',n:'No cumple',na:'N/A'};
+  return '<div class="it" data-id="'+id+'" data-r="'+(d.r||'')+'"><p class="q">'+esc(sec.items[i])+'</p>'+
+    '<div class="seg" role="group" aria-label="Resultado">'+['c','n','na'].map(function(v){
+      return '<button type="button" class="sb" data-act="set" data-v="'+v+'" aria-pressed="'+(d.r===v)+'">'+lab[v]+'</button>';
+    }).join('')+'</div>'+
+    (open?extraHTML(id,d):'<button type="button" class="link" data-act="more">Nota o foto</button>')+'</div>';
+}
+function secHTML(sec,idx){
+  var open=(sec.id in ui.secOpen)?ui.secOpen[sec.id]:idx===0;
+  return '<details class="sec" data-sec="'+sec.id+'"'+(open?' open':'')+'><summary>'+secSum(sec)+'</summary><p class="ref">'+esc(sec.ref)+'</p>'+
+    sec.items.map(function(_,i){return itemHTML(sec,i)}).join('')+'</details>';
+}
+function relView(){
+  var m=st.meta;
+  return '<details class="card" open><summary><span class="st">Datos de la inspección</span><span class="chev" aria-hidden="true"></span></summary><div class="grid">'+
+    fld('estab','Establecimiento',m.estab,'text','Nombre o razón social')+
+    fld('sector','Sector o tipo de taller',m.sector,'text','Ej. mecánica, gomería')+
+    fld('inspector','Inspector',m.inspector,'text','')+
+    fld('acomp','Acompañante',m.acomp,'text','')+
+    fld('fecha','Fecha',m.fecha,'date','')+
+    fld('hora','Hora',m.hora,'time','')+
+    '</div></details>'+
+    SECTIONS.map(secHTML).join('')+
+    '<p class="disc">Las referencias normativas son orientativas (normativa nacional argentina). Verificá la versión vigente y los requisitos de tu jurisdicción. Esta lista no reemplaza el relevamiento de un profesional matriculado en Higiene y Seguridad.</p>';
+}
+
+/* ---------- vista: mediciones ---------- */
+function luxRow(r,i){
+  return '<div class="mrow" data-kind="lux" data-i="'+i+'">'+
+    '<label class="fld wide"><span>Punto de medición</span><input type="text" data-f="p" value="'+esc(r.p)+'"></label>'+
+    '<label class="fld"><span>Medido (lux)</span><input type="number" inputmode="decimal" min="0" step="1" data-f="m" value="'+esc(r.m)+'"></label>'+
+    '<label class="fld"><span>Exigible</span><select data-f="r">'+LUX.map(function(o){return '<option value="'+o[0]+'"'+(+r.r===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select></label>'+
+    '<div class="mres">'+pill(luxRes(r))+'<button type="button" class="link" data-act="rmrow">Quitar</button></div></div>';
+}
+function noiseRow(r,i){
+  return '<div class="mrow" data-kind="noise" data-i="'+i+'">'+
+    '<label class="fld wide"><span>Fuente o puesto</span><input type="text" data-f="p" value="'+esc(r.p)+'"></label>'+
+    '<label class="fld"><span>Nivel (dB(A))</span><input type="number" inputmode="decimal" min="0" step="0.1" data-f="db" value="'+esc(r.db)+'"></label>'+
+    '<label class="fld"><span>Horas por día expuesto</span><input type="number" inputmode="decimal" min="0" max="24" step="0.5" data-f="h" value="'+esc(r.h)+'"></label>'+
+    '<div class="mres">'+pill(noiseRes(r))+'<button type="button" class="link" data-act="rmrow">Quitar</button></div></div>';
+}
+function medView(){
+  return '<section class="card"><div class="hd"><h2>Iluminación</h2><p class="note">Medí con luxómetro sobre el plano de trabajo, a unos 0,80 m del piso, sin tapar el sensor con el cuerpo. El valor exigible depende de la tarea: los de la lista son de uso habitual, ajustalos con la Tabla 2 del Anexo IV del Dec. 351/79.</p></div>'+
+    st.lux.map(luxRow).join('')+
+    '<div class="foot"><button type="button" class="btn" data-act="addrow" data-kind="lux">+ Punto de iluminación</button></div></section>'+
+    '<section class="card"><div class="hd"><h2>Ruido</h2><p class="note">El límite del Anexo V es 85 dB(A) para 8 h, y baja el tiempo permitido a la mitad por cada 3 dB que sube el nivel. Medí en la oreja del operario con el equipo trabajando en su régimen normal.</p></div>'+
+    st.noise.map(noiseRow).join('')+
+    '<div class="foot"><button type="button" class="btn" data-act="addrow" data-kind="noise">+ Punto de ruido</button></div></section>'+
+    '<details class="card"><summary><span class="st">Cómo tomar buenas mediciones</span><span class="chev" aria-hidden="true"></span></summary><div class="howto"><ul>'+
+    '<li>Una app del celular sirve para detectar zonas problemáticas, pero no certifica. Para el informe formal usá instrumentos calibrados con los protocolos de la Res. SRT 84/12 (iluminación) y 85/12 (ruido).</li>'+
+    '<li>Iluminación: medí de día y de noche si hay luz natural, y anotá si la luminaria estaba limpia.</li>'+
+    '<li>Ruido: usá ponderación A y respuesta lenta. Cada fila evalúa un punto por separado; si una misma persona pasa por varios, la dosis diaria se calcula sumando los tiempos de cada nivel.</li>'+
+    '</ul></div></details>';
+}
+
+/* ---------- vista: informe ---------- */
+function infView(){
+  var T=totals(), P=pct(T.c,T.n), pend=T.t-T.done, F=findings();
+  function w(v){return (T.t?100*v/T.t:0).toFixed(2)+'%'}
+  var h='<section class="card"><div class="hd"><h2>Resumen</h2></div>'+
+    '<div class="score"><span class="big">'+(P===null?'—':P+'%')+'</span><span class="note">de los puntos revisados cumplen. Los N/A y los pendientes no cuentan.</span></div>'+
+    '<div class="stack" role="img" aria-label="Distribución de resultados"><i style="width:'+w(T.c)+';background:var(--ok)"></i><i style="width:'+w(T.n)+';background:var(--bad)"></i><i style="width:'+w(T.na)+';background:var(--ink-2)"></i></div>'+
+    '<div class="legend"><span><span class="dot" style="background:var(--ok)"></span>Cumple <b>'+T.c+'</b></span><span><span class="dot" style="background:var(--bad)"></span>No cumple <b>'+T.n+'</b></span><span><span class="dot" style="background:var(--ink-2)"></span>N/A <b>'+T.na+'</b></span><span><span class="dot" style="background:var(--surface-2);border:1px solid var(--line)"></span>Sin revisar <b>'+pend+'</b></span></div>';
+  SECTIONS.forEach(function(s){
+    var k=counts(s), p=pct(k.c,k.n);
+    h+='<div class="srow"><span>'+esc(s.name)+(k.n?' <span class="pill bad">'+k.n+'</span>':'')+'</span><span class="mini" aria-hidden="true"><i style="width:'+(100*k.c/k.t)+'%;background:var(--ok)"></i><i style="width:'+(100*k.n/k.t)+'%;background:var(--bad)"></i></span><span class="pc">'+(p===null?'—':p+'%')+'</span></div>';
+  });
+  h+='</section>';
+
+  h+='<section class="card"><div class="hd"><h2>Hallazgos ('+F.length+')</h2><p class="note">Ordenados por prioridad. Si un hallazgo no tiene prioridad, marcala en el relevamiento.</p></div>';
+  if(!F.length){h+='<p class="empty">Todavía no hay puntos marcados como No cumple.</p>';}
+  else{
+    h+='<ol class="flist">'+F.map(function(f){
+      var cls=f.sev?SEV[f.sev].c:'idle', lab=f.sev?'Prioridad '+SEV[f.sev].l.toLowerCase():'Sin priorizar', plazo=f.sev?SEV[f.sev].plazo:'Definir prioridad';
+      var ph=(photos[f.id]||[]).map(function(src,k){return '<div class="ph"><img src="'+src+'" alt="Foto '+(k+1)+' del hallazgo"></div>'}).join('');
+      return '<li class="fnd"><div class="fh"><span class="pill '+cls+'">'+lab+'</span><span class="fs">'+esc(f.sec)+'</span></div><p>'+esc(f.t)+'</p>'+
+        (f.note?'<p class="fn">'+esc(f.note)+'</p>':'')+(ph?'<div class="phrow">'+ph+'</div>':'')+'<p class="fp">Plazo sugerido: '+plazo+'</p></li>';
+    }).join('')+'</ol>';
+  }
+  h+='</section>';
+
+  var flags=[];
+  st.lux.forEach(function(r){var x=luxRes(r); if(x.k==='bad') flags.push('Iluminación · '+esc(r.p||'Sin nombre')+': '+esc(x.t)+' (exigible '+esc(r.r)+' lux)')});
+  st.noise.forEach(function(r){var x=noiseRes(r); if(x.k==='bad') flags.push('Ruido · '+esc(r.p||'Sin nombre')+': '+esc(r.db)+' dB(A) durante '+esc(r.h===''?8:r.h)+' h. '+esc(x.t))});
+  h+='<section class="card"><div class="hd"><h2>Mediciones fuera de rango</h2></div>'+(flags.length?'<ul class="howto">'+flags.map(function(f){return '<li>'+f+'</li>'}).join('')+'</ul>':'<p class="empty">Ninguna medición cargada supera los límites.</p>')+'</section>';
+
+  h+='<section class="card"><div class="hd"><h2>Observaciones generales</h2></div><div class="body"><label class="fld"><span class="sr" style="position:absolute;left:-9999px">Observaciones generales</span><textarea id="obs" data-obs rows="4" placeholder="Condiciones generales, personas entrevistadas, puntos a revisar en la próxima visita">'+esc(st.obs)+'</textarea></label></div>'+
+    '<div class="foot"><button type="button" class="btn pri" data-act="copy">Copiar informe</button>'+
+    (ui.confirmClear?'<span class="note" style="align-self:center">Se pierden respuestas, notas y fotos.</span><button type="button" class="btn danger" data-act="clear-yes">Sí, borrar todo</button><button type="button" class="btn" data-act="clear-no">Cancelar</button>':'<button type="button" class="btn danger" data-act="clear">Empezar de nuevo</button>')+
+    '</div><div class="body" id="fbwrap" hidden><p class="note">Tu navegador no dejó copiar solo. Seleccioná el texto y copialo a mano.</p><textarea id="fallback" readonly></textarea></div>'+
+    '<p class="note" style="padding:0 14px 14px">Las fotos se conservan mientras esta página esté abierta. Las respuestas y notas se guardan en este navegador.</p></section>';
+  return h;
+}
+
+/* ---------- texto del informe ---------- */
+function reportText(){
+  var m=st.meta, T=totals(), P=pct(T.c,T.n), F=findings(), L=[];
+  L.push('INSPECCIÓN DE HIGIENE Y SEGURIDAD');
+  L.push('Establecimiento: '+(m.estab||'-')+(m.sector?' ('+m.sector+')':''));
+  L.push('Fecha: '+(m.fecha||'-')+(m.hora?' '+m.hora:'')+' | Inspector: '+(m.inspector||'-')+(m.acomp?' | Acompañante: '+m.acomp:''));
+  L.push('');
+  L.push('CUMPLIMIENTO: '+(P===null?'sin datos':P+'%')+' ('+T.c+' cumplen, '+T.n+' no cumplen, '+T.na+' N/A, '+(T.t-T.done)+' sin revisar)');
+  L.push('');
+  L.push('HALLAZGOS ('+F.length+')');
+  if(!F.length) L.push('Sin hallazgos registrados.');
+  F.forEach(function(f,i){
+    L.push((i+1)+'. ['+(f.sev?SEV[f.sev].l.toUpperCase():'SIN PRIORIZAR')+'] '+f.sec+': '+f.t);
+    if(f.note) L.push('   Nota: '+f.note);
+    var np=(photos[f.id]||[]).length; if(np) L.push('   Fotos: '+np);
+    L.push('   Plazo sugerido: '+(f.sev?SEV[f.sev].plazo:'definir prioridad'));
+  });
+  L.push('');
+  L.push('MEDICIONES DE ILUMINACIÓN');
+  var any=false;
+  st.lux.forEach(function(r){var x=luxRes(r); if(x.k!=='idle'){any=true;L.push('- '+(r.p||'Sin nombre')+': '+r.m+' lux (exigible '+r.r+') -> '+x.t)}});
+  if(!any) L.push('Sin mediciones cargadas.');
+  L.push('');
+  L.push('MEDICIONES DE RUIDO');
+  any=false;
+  st.noise.forEach(function(r){var x=noiseRes(r); if(x.k!=='idle'){any=true;L.push('- '+(r.p||'Sin nombre')+': '+r.db+' dB(A), '+(r.h===''?8:r.h)+' h/día -> '+x.t)}});
+  if(!any) L.push('Sin mediciones cargadas.');
+  if(st.obs&&st.obs.trim()){L.push('');L.push('OBSERVACIONES');L.push(st.obs.trim())}
+  return L.join('\n');
+}
+
+/* ---------- render ---------- */
+function render(){
+  app.innerHTML=ui.tab==='rel'?relView():ui.tab==='med'?medView():infView();
+  document.querySelectorAll('.tabs button').forEach(function(b){b.setAttribute('aria-selected',String(b.dataset.tab===ui.tab))});
+  updateProgress();
+}
+function updateProgress(){
+  var T=totals();
+  document.getElementById('ptext').textContent=T.done+' de '+T.t+' puntos revisados';
+  document.getElementById('pnc').textContent=T.n?T.n+(T.n===1?' no cumple':' no cumplen'):'';
+  document.getElementById('pfill').style.width=(T.t?100*T.done/T.t:0)+'%';
+}
+function splitId(id){var p=id.split('-');return {sec:SECTIONS.filter(function(s){return s.id===p[0]})[0],i:+p[1]}}
+function refreshItem(id){
+  var o=splitId(id), el=app.querySelector('[data-id="'+id+'"]');
+  if(el&&o.sec){
+    el.outerHTML=itemHTML(o.sec,o.i);
+    var sm=app.querySelector('details[data-sec="'+o.sec.id+'"] > summary');
+    if(sm) sm.innerHTML=secSum(o.sec);
+  }
+  updateProgress(); save();
+}
+
+/* ---------- eventos ---------- */
+document.querySelector('.tabs').addEventListener('click',function(e){
+  var b=e.target.closest('button[data-tab]'); if(!b) return;
+  ui.tab=b.dataset.tab; render(); window.scrollTo(0,0);
+});
+app.addEventListener('toggle',function(e){var d=e.target; if(d&&d.dataset&&d.dataset.sec) ui.secOpen[d.dataset.sec]=d.open},true);
+
+app.addEventListener('click',function(e){
+  var t=e.target.closest('[data-act]'); if(!t) return;
+  var act=t.dataset.act, itEl=t.closest('.it'), id=itEl?itEl.dataset.id:null, d;
+  if(act==='set'){
+    d=item(id); d.r=(d.r===t.dataset.v)?null:t.dataset.v; if(d.r!=='n') d.sev=null; refreshItem(id);
+  }else if(act==='sev'){
+    d=item(id); d.sev=(d.sev===t.dataset.s)?null:t.dataset.s; refreshItem(id);
+  }else if(act==='more'){
+    ui.open[id]=true; refreshItem(id);
+  }else if(act==='rmph'){
+    (photos[id]||[]).splice(+t.dataset.k,1); refreshItem(id);
+  }else if(act==='addrow'){
+    if(t.dataset.kind==='lux') st.lux.push({p:'',m:'',r:300}); else st.noise.push({p:'',db:'',h:8});
+    save(); render();
+  }else if(act==='rmrow'){
+    var row=t.closest('.mrow'), arr=row.dataset.kind==='lux'?st.lux:st.noise;
+    arr.splice(+row.dataset.i,1); save(); render();
+  }else if(act==='copy'){
+    var txt=reportText();
+    var fail=function(){
+      var w=document.getElementById('fbwrap'), ta=document.getElementById('fallback');
+      w.hidden=false; ta.value=txt; ta.focus(); ta.select();
+    };
+    try{
+      navigator.clipboard.writeText(txt).then(function(){t.textContent='Copiado';setTimeout(function(){t.textContent='Copiar informe'},1800)},fail);
+    }catch(err){fail()}
+  }else if(act==='clear'){ui.confirmClear=true;render()}
+  else if(act==='clear-no'){ui.confirmClear=false;render()}
+  else if(act==='clear-yes'){
+    st=fresh(); photos={}; ui.open={}; ui.confirmClear=false;
+    try{localStorage.removeItem(KEY)}catch(err){}
+    render(); window.scrollTo(0,0);
+  }
+});
+
+app.addEventListener('input',function(e){
+  var t=e.target;
+  if(t.dataset.meta){st.meta[t.dataset.meta]=t.value;save();return}
+  if(t.dataset.obs!==undefined){st.obs=t.value;save();return}
+  if(t.dataset.act==='note'){var it=t.closest('.it'); item(it.dataset.id).note=t.value; save(); return}
+  var row=t.closest('.mrow');
+  if(row&&t.dataset.f){
+    var kind=row.dataset.kind, i=+row.dataset.i, arr=kind==='lux'?st.lux:st.noise;
+    arr[i][t.dataset.f]=t.value;
+    var res=kind==='lux'?luxRes(arr[i]):noiseRes(arr[i]), p=row.querySelector('[data-res]');
+    p.className='pill '+res.k; p.textContent=res.t; save();
+  }
+});
+
+app.addEventListener('change',function(e){
+  var t=e.target;
+  if(t.dataset.act!=='photo'||!t.files||!t.files[0]) return;
+  var id=t.closest('.it').dataset.id, file=t.files[0], fr=new FileReader();
+  fr.onload=function(){
+    var img=new Image();
+    img.onload=function(){
+      var k=Math.min(1,900/Math.max(img.width,img.height)), c=document.createElement('canvas');
+      c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      (photos[id]=photos[id]||[]).push(c.toDataURL('image/jpeg',0.72));
+      refreshItem(id);
+    };
+    img.src=fr.result;
+  };
+  fr.readAsDataURL(file);
+});
+
+render();
+})();
+</script>
+</body>
+</html>
